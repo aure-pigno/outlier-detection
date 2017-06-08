@@ -3,7 +3,6 @@
 
 library(roxygen2)
 library("devtools")
-library("testthat")
 library("knitr")
 
 
@@ -57,8 +56,9 @@ outlier_dependencies <- c(
   "igraph",
   "R.matlab",
   "caret",
-  "ldbod"
-  ,"Rlof"
+  "ldbod",
+  "Rlof",
+  "weights"
 )
 
 validation_dependencies <- c(

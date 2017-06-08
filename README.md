@@ -21,6 +21,7 @@ gen_results.R: compute all the results and store them directly in the right plac
 
 (Warning: launching all the preprocessings, all the base detectors, all the files is really really long. Use only "local_asinh_no_rd" as preprocessing)
 
+
 dependencies needed: 
 ape,
 assertive,
@@ -39,7 +40,6 @@ R.matlab,
 Rlof,
 roxygen2,
 rstudioapi,
-testthat,
 weights
 
 

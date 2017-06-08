@@ -51,6 +51,7 @@ gen_multi_class <- function(n, normal.q=0.90, outliers.q=0.01, mu_a=rep(0, nrow(
 #' @param n the number of samples 
 #' @param normal.q the percentile to consider as normal samples  
 #' @param outliers.q the percentile to consider as outliers 
+#' @param d number of features
 #' @param mu the means 
 #' @param sigma covariance matrix  
 #' @return list containing two sets, normal and outliers 
@@ -82,9 +83,9 @@ split_normal_outliers <- function(data, normal.q, outliers.q, mu, sigma){
 #' helper method to resample a data set containing 2 classes.   
 #' 
 #' @param data the dataset
-#' @param normal.q the percentile to consider as normal samples  
 #' @param nnormal number of normal points  
 #' @param noutliers number of outliers 
+#' @param d number of features
 #' @param replace TRUE if the same sample can be picked multiple times 
 #' @param balance specify the class balance. 
 #' @return list containing: x the new dataset ( with an extra feature for the class), y a boolean vector indicating which sample is an outlier  
@@ -106,9 +107,9 @@ resample_multi <- function(data, nnormal=100, noutliers=ceiling(5*nnormal/100), 
 #' helper method to resample a data set containing 1 classe.   
 #' 
 #' @param data the dataset
-#' @param normal.q the percentile to consider as normal samples  
 #' @param nnormal number of normal points  
 #' @param noutliers number of outliers 
+#' @param d number of features
 #' @param replace TRUE if the same sample can be picked multiple times 
 #' @return list containing: x the new dataset, y a boolean vector indicating which sample is an outlier  
 resample <- function(data, nnormal=100, noutliers=ceiling(5*nnormal/100), d=ncol(data$normal), replace=FALSE){

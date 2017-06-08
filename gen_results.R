@@ -1,4 +1,4 @@
-# cat("\014") 
+source("functions.R")
 source("config.R")
 
 gen_results <- function(normalization_methods, pca_methods, bagging_methods, files, base_detector_methods, ensemble_methods, data_folder, result_folder,only_missing = TRUE){

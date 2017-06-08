@@ -13,7 +13,9 @@ choose_color <- function(n = 10, start="green", end="red"){
 #'
 #' @param lor list of result of all functions
 #' @param lensemle vector of result of the ensemble function  
-#' @param max_n maximum number of points draw
+#' @param y vector containing 1 for outliers, 0 for inliers, 
+#' @param n number maximum of points written by detector
+#' @param percent proportion maximum of points written by detector
 #' @export
 graph <- function(lor, lensemble,y = NULL,n = 10,percent = 0.2){
   out_node = c()
@@ -104,6 +106,7 @@ boxplot_display <- function(original_dataset_name, dataset_name, v_of_techniques
 #' @param path The path containing the results fom the different detection methods
 #' @param origin The path containing the dataset 
 #' @param pca_method The method to use to compute the pca 
+#' @param preprocess_method preprocessing method apply 
 #' @export
 pca_display <- function(original_dataset_name, dataset_name, v_of_techniques, path="data/result/", origin="data/converted/", pca_method=prcomp, preprocess_method=outliers::preprocessing){
   load(paste(origin, original_dataset_name, ".Rda", sep=""))
@@ -131,6 +134,7 @@ pca_display <- function(original_dataset_name, dataset_name, v_of_techniques, pa
 #' @param out_shape the shape to use to represent outliers
 #' @param normal_shape the shape to use to represent normal points
 #' @param nsd the number of standard deviation to be considered as outliers
+#' @param title the title of the pca
 #' @export
 plot_pca <- function(data, scores, pca=prcomp(data), y=rep(FALSE, length(scores)), out_shape=17, normal_shape=19, nsd=4, title="" ){
   projected = predict(pca, data)
@@ -168,8 +172,11 @@ plot_pca <- function(data, scores, pca=prcomp(data), y=rep(FALSE, length(scores)
 #' Plot a boxplot with detected outliers in red. return the index of the points outside of the wiskers 
 #'
 #' @param scores the scores to plot   
+#' @param outliers a vector containing the outliers
 #' @param nsd the number of standard deviation to be considered as outliers
 #' @param threshold the max score for normal point
+#' @param show_names boolean to show the names
+#' @param title the title of the pca
 #' @export
 plot_boxplot <- function(scores, outliers= NULL, nsd=5, threshold=mean(scores)+nsd*sd(scores), show_names=TRUE, title=""){
   # build the boxplot from scratch. data in red is at mean + nsd  * sd.  

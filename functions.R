@@ -57,7 +57,7 @@ compute_ensembles <-function(files, base_detector_methods, ensemble_methods, res
   }
 }
 
-# compute a matrix with all the auc and save the results in the data directory 
+# Compute a matrix with all the auc and save the results in the data directory 
 compute_auc<-function(files, detector_methods, result_folder, data_folder){
   auc_matrix = matrix(ncol = length(detector_methods), nrow=length(files))
   colnames(auc_matrix) <- names(detector_methods) 
@@ -80,7 +80,7 @@ compute_auc<-function(files, detector_methods, result_folder, data_folder){
   }
 }
 
-# compute an array with all the proportion of outliers found and save the results in the data directory 
+# Compute an array with all the proportion of outliers found and save the results in the data directory 
 compute_percent<-function(files, detector_methods, result_folder, data_folder, thresholds = c(0.01,0.05, 0.1)){
   percent_array = array(
                         dim = c(length(files), length(detector_methods), length(thresholds)),
@@ -104,12 +104,12 @@ compute_percent<-function(files, detector_methods, result_folder, data_folder, t
   save(percent_array, file=paste(result_folder, "percent_array.Rda", sep=""))
 }
 
-# easier to use than paste 
+# Easier to use than paste 
 join <- function(vec, sep="", prefix=NULL, postfix=NULL){
   paste(prefix, paste(vec, collapse=sep),postfix, sep="") 
 }
 
-# redraw plots  
+# Draw plots  
 draw_all_plots<-function(supervised_files, detector_methods, result_folder, data_folder, preprocess_method){
   print(names(detector_methods))
   for(file in supervised_files){

@@ -51,7 +51,7 @@ introduce_value_increased_outliers <- function(data, sample_proportion=.1,  feat
 #' 
 #' @param data The original dataset 
 #' @param class The name of the class variable. class by default 
-#' @param percentage The percentage of affected labels 
+#' @param proportion The percentage of affected labels 
 #' @return A modified copy of \code{data} containing \code{proportion} modified labels from \code{class} and vector indicating which indices have been modified
 #' @export
 #' @examples

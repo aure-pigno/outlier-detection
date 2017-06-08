@@ -14,23 +14,11 @@ benchmark <- function(f, args){
   list("tdelta"=as.numeric(dtime, units="secs"), "fresult"=res)
 }
 
-#' open a file and return the labels (y)
-#' 
-#' @param dataset_name name of the files (without.RDA)
-#' @param path path to the document 
-#' @return a vector y
-#' @export
-#'function_label <- function(dataset_name, path="data/converted/supervised/"){
-#'  load(paste(path, dataset_name, ".Rda", sep=""))
-#'  data$y
-#'}
-
 
 #' run the given function wrapped around two calls of Sys.time() and returns the execution time delta and the function result
 #' 
-#' @param files name of the files (without.RDA)
+#' @param dataset_name name of the files (without.RDA)
 #' @param v_of_techniques list of techniques uses
-#' @param args the function arguments 
 #' @param path path to the document 
 #' @return a list of results
 #' @export
