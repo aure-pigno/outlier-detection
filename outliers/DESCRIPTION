@@ -1,0 +1,30 @@
+Package: outliers
+Title: Automated unsupervised outlier detection
+Version: 0.1
+Authors@R: c(
+  person("Sue", "Lambot", email = "sue.lambot@student.uclouvain.be", role = c("aut", "cre")), 
+  person("Aurélien", "Pignolet", email = "aurelien.pignolet@student.uclouvain.be", role = c("aut"))
+  )
+Description: This package is a collection of method used for the automated
+    unsupervised outlier detection in the REED software.
+Depends:
+    R (>= 3.3.2)
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Imports:
+    assertive,
+    data.table,
+    psych,
+    fields,
+    parallel,
+    mpmi,
+    ape,
+    igraph,
+    R.matlab,
+    caret,
+    ldbod,
+    Rlof
+RoxygenNote: 6.0.1
+Suggests:
+    testthat
