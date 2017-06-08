@@ -10,8 +10,9 @@
         - percent_array: Rda file that contains the percent array for each dataset, for each detector, for each trechold
         - directory for each dataset: results files for each BASE detector 
 
+```
 Warning: only "local_asinh_no_rd" contains all the files, otherwhise, for the r and mc datasets, only one will be present for each dimension 
-
+```
 #### validation directory: (sources of the validation package)
 - DESCRIPTION: description of the package
 - NAMESPACE: all the exported functions
@@ -49,30 +50,18 @@ compute all the results and store them directly in the right place in the data d
 ##### make_package.R: 
 compile the packages outliers and validation
 
-
+```
 Warning: launching all the preprocessings, all the base detectors, all the files is really really long. Use only "local_asinh_no_rd" as preprocessing
-
+```
 ## Additional informations
 #### Order of execution:
-	make_package -> fucntion -> config -> gen_results
-
+```
+make_package.R -> fucntion.R -> config.R -> gen_results.R
+```
 
 #### Dependencies needed: 
-	ape,
-	assertive,
-	caret,
-	data.table,
-	devtools,
-	e1071,
-	fields,
-	igraph,
-	knitr,
-	mpmi,
-	ldbod,
-	pROC,
-	psych,
-	R.matlab, 
-	Rlof,
-	roxygen2,
-	rstudioapi,
-	weights
+```
+ape, assertive, caret, data.table, devtools, e1071,
+fields, igraph, knitr, mpmi, ldbod, pROC, psych,
+R.matlab,  Rlof, roxygen2, rstudioapi, weights
+```
