@@ -1,26 +1,174 @@
-#' Return an outlier score computed by doing a pca + lof 
+# 2 phases clustering
+
+
+
+#' Compute a modified K-means
 #'
 #' @param data a data frame containing only numerical features 
-#' @export
-pca_lof <- function(data, pca_meth=basic_pca){
-  pca = pca_meth(na.omit(data))
-  pca = scale(na.omit(data), pca$center, pca$scale)
-  nsub = nrow(pca)
-  if(nsub<=20) k = c(round(nsub-1),round((nsub-1)/2))
-  else k = c(10,20)
-  result = ldbod::ldbod(pca, k = k, nsub = nsub, method = c("lof"))
-  result = apply(result$lof,1,function(x) mean(x, na.rm = TRUE))
+#' @param n proportion of dataset use as cluster 0<n<1
+#' @param max_clusters maximal proportion allowed
+#' @param dist_meth the distance used
+MKP <- function(data, n, max_clusters, dist_meth="euclidean"){
+  #' Initialize n clusters at random, or take n points in the dataset
+  init_clusters <- function(data, n){
+    mapply(function(x, y) runif(n, x, y), sapply(data, min, na.rm = TRUE), sapply(data, max, na.rm = TRUE))
+  }
   
-  result = result - min(result)
-  result[which(!is.finite(result))] = -1
-  result[which(result == -1)] = 3*max(result)
-  result/sum(result)
+  n = as.integer(length(data[,1])*n)
+  max_clusters = as.integer(length(data[,1])*max_clusters)
+  # Step 1
+  clusters = init_clusters(data, n)
+  old_clusters = clusters - 1
+  maxiter = 20
+  iter = 0
+  #while (length(clusters) != length(old_clusters) || (FALSE %in% (old_clusters == clusters))) {
+  while((length(clusters) != length(old_clusters) || sum(abs(old_clusters - clusters))>0.05*length(clusters)) && iter < maxiter   ) {
+    iter = iter+1
+    old_clusters = clusters
+    # Step 2
+    distance_matrix = dist(clusters, method = dist_meth)
+    distance = fields::rdist(clusters, na.omit(data))
+    if(min(distance) > min(distance_matrix)){ # Step 3
+      # Step 4: Splitting process
+      larger_length_index = which.max(sapply(data.frame(distance), min, na.rm = TRUE))
+      clusters = rbind(clusters, data[larger_length_index,])
+      # Step 5: Merging process
+      len = length(data.matrix(clusters)[,1])
+      while(len > max_clusters) {
+        distance_matrix = dist(data.matrix(clusters), method = dist_meth)
+        index1 = as.integer(which.min(distance_matrix)/(len-1))+1
+        index2 = (which.min(distance_matrix) %% (len-1))+1
+        new_row = mapply(sum, clusters[index1,], clusters[index2,])
+        clusters <- rbind(clusters[-c(index1, index2),], new_row/2)
+        len = length(data.matrix(clusters)[,1])
+      }
+    }
+    # Step 6
+    distance = data.frame(fields::rdist(clusters, data))
+    min_distance = apply(t(distance), 1, which.min)
+    clusters = na.exclude(t(sapply(1:n, function(x) colSums(data[which(min_distance == x),])/length(which(min_distance == x)))))
+  }
+  clusters
 }
+
+#' Minimum spanning tree
+#'
+#' @param data a data frame containing only numerical features 
+#' @param centroids a matrix containing centroids
+#' @param percent maximalsize of a group to consider all this points as outliers
+#' @param dist_meth the distance used
+MST <- function(data, centroids, percent = 0.05, dist_meth="euclidean") {
+  if(nrow(centroids) != 1){
+    distance_matrix = dist(centroids, method = dist_meth, upper = TRUE)
+    v = ape::mst(distance_matrix)
+    rem = as.matrix(v)*as.matrix(distance_matrix) > 2*mean(as.matrix(v)*as.matrix(distance_matrix))
+    v = v*(1-rem)
+    connections = apply(v,1,sum)
+    outliers_clusters = which(connections <= 1)
+    distance = data.frame(fields::rdist(centroids, data))
+    
+    vec_na = which(apply(distance,2, function(x) NA %in% x))
+    min_distance = apply(t(distance), 1, which.min)
+    vec = c()
+    for(i in outliers_clusters){
+      index = sapply(which( rapply(list(min_distance), c) ==i), function(x){
+        ori_len = length(vec_na[which(vec_na<x)])
+        new_len = length(vec_na[which(vec_na<x+ ori_len)])
+        x = x+ori_len
+        while(ori_len != new_len){
+          x = x-ori_len+new_len
+          ori_len = length(vec_na[which(vec_na<x)])
+          new_len = length(vec_na[which(vec_na<x+ ori_len)])
+        }
+        x
+      })
+      if(length(index) < percent*length(data[,1])){
+        vec = c(vec, index)
+      }
+    }
+    as.vector(vec)
+  }
+  else {c()}
+}
+
+#' Minimum spanning tree
+#'
+#' @param data a data frame containing only numerical features 
+#' @param centroids a matrix containing centroids
+#' @param percent maximalsize of a group to consider all this points as outliers
+#' @param dist_meth the distance used
+MST2 <- function(data, centroids, percent = 0.05, dist_meth="euclidean") {
+  if(nrow(centroids) != 1){
+    distance_matrix = dist(centroids, method = dist_meth, upper = TRUE)
+    v = ape::mst(distance_matrix)
+    len = length(v)
+    v = as.matrix(v)
+    distance_matrix = as.matrix(distance_matrix)
+    rem = matrix(rep(FALSE, len), nrow = sqrt(len), ncol = sqrt(len))
+    for(i in 1:nrow(v)){
+      val = v[i,]*distance_matrix[i,] > 2*mean(v[i,]*distance_matrix[i,])
+      rem[i,] = sapply(1:nrow(rem), function(x) rem[i,x] || val[x])
+      rem[,i] = sapply(1:nrow(rem), function(x) rem[x,i] || val[x])
+    }
+    v = v*(1-rem)
+    connections = apply(v,1,sum)
+    outliers_clusters = which(connections <= 1)
+    distance = data.frame(fields::rdist(centroids, data))
+    
+    vec_na = which(apply(distance,2, function(x) NA %in% x))
+    min_distance = apply(t(distance), 1, which.min)
+    vec = c()
+    for(i in outliers_clusters){
+      index = sapply(which( rapply(list(min_distance), c) ==i), function(x){
+        ori_len = length(vec_na[which(vec_na<x)])
+        new_len = length(vec_na[which(vec_na<x+ ori_len)])
+        x = x+ori_len
+        while(ori_len != new_len){
+          x = x-ori_len+new_len
+          ori_len = length(vec_na[which(vec_na<x)])
+          new_len = length(vec_na[which(vec_na<x+ ori_len)])
+        }
+        x
+      })
+      if(length(index) < percent*length(data[,1])){
+        vec = c(vec, index)
+      }
+    }
+    as.vector(vec)
+  }
+  else {c()}
+}
+
+#' Return an outlier score based on the two phases clustering algorithm
+#'
+#' @param data a data frame containing only numerical features 
+#' @param n number of repetion of the algorithm
+#' @param base_p_cluster initial number of clusters (proportion of data)
+#' @param max_p_cluster maximum number of clusters (proportion of data)
+#' @export
+two_phases_clustering <- function(data, n = 50, base_p_cluster = 0.1, max_p_clusters = 0.2){
+  out = rep(0,length(data[,1]))
+  for (i in 1:n) {
+    #centroids = kmeans(data,as.integer(length(data[,1])*base_p_cluster))$centers
+    centroids = MKP(data, base_p_cluster, max_p_clusters)
+    outliers = MST2(data, centroids)
+    if(length(outliers) != 0)
+      out[outliers] = out[outliers]+1
+  }
+  if(sum(out) == 0) out = rep(1,length(data[,1]))
+  vec = (out/n)
+  vec/sum(vec)
+}
+
+
+
+## hierarchical clustering
 
 #' Return an outlier score computed by hyerarchical clustering
 #'
 #' @param data a data frame containing only numerical features 
 #' @param percent number of clusters 
+#' @param dist_meth the distance used
 #' @export
 hclustering <- function(data,percent = 10, dist_meth="euclidean") {
   mydata <- scale(na.omit(data))
@@ -69,175 +217,40 @@ hclustering <- function(data,percent = 10, dist_meth="euclidean") {
   vec/sum(vec)
 }
 
-# 2 phases clustering
 
-#' Compute a modified K-means
+
+## Local outlier factor
+
+#' Return an outlier score computed by doing a pca + lof 
 #'
 #' @param data a data frame containing only numerical features 
-#' @param n proportion of dataset use as cluster 0<n<1
-#' @param max_clusters maximal proportion allowed
-MKP <- function(data, n, max_clusters, dist_meth="euclidean"){
-  #' Initialize n clusters at random, or take n points in the dataset
-  init_clusters <- function(data, n){
-    mapply(function(x, y) runif(n, x, y), sapply(data, min, na.rm = TRUE), sapply(data, max, na.rm = TRUE))
-  }
-  
-  n = as.integer(length(data[,1])*n)
-  max_clusters = as.integer(length(data[,1])*max_clusters)
-  # Step 1
-  clusters = init_clusters(data, n)
-  old_clusters = clusters - 1
-  maxiter = 20
-  iter = 0
-  #while (length(clusters) != length(old_clusters) || (FALSE %in% (old_clusters == clusters))) {
-  while((length(clusters) != length(old_clusters) || sum(abs(old_clusters - clusters))>0.05*length(clusters)) && iter < maxiter   ) {
-    iter = iter+1
-    old_clusters = clusters
-    # Step 2
-    distance_matrix = dist(clusters, method = dist_meth)
-    distance = fields::rdist(clusters, na.omit(data))
-    if(min(distance) > min(distance_matrix)){ # Step 3
-      # Step 4: Splitting process
-      larger_length_index = which.max(sapply(data.frame(distance), min, na.rm = TRUE))
-      clusters = rbind(clusters, data[larger_length_index,])
-      # Step 5: Merging process
-      len = length(data.matrix(clusters)[,1])
-      while(len > max_clusters) {
-        distance_matrix = dist(data.matrix(clusters), method = dist_meth)
-        index1 = as.integer(which.min(distance_matrix)/(len-1))+1
-        index2 = (which.min(distance_matrix) %% (len-1))+1
-        new_row = mapply(sum, clusters[index1,], clusters[index2,])
-        clusters <- rbind(clusters[-c(index1, index2),], new_row/2)
-        len = length(data.matrix(clusters)[,1])
-      }
-    }
-    # Step 6
-    distance = data.frame(fields::rdist(clusters, data))
-    min_distance = apply(t(distance), 1, which.min)
-    clusters = na.exclude(t(sapply(1:n, function(x) colSums(data[which(min_distance == x),])/length(which(min_distance == x)))))
-  }
-  clusters
-}
-
-
-
-#' Minimum spanning tree
-#'
-#' @param data a data frame containing only numerical features 
-#' @param centroids a matrix containing centroids
-#' @param percent maximalsize of a group to consider all this points as outliers
-MST <- function(data, centroids, percent = 0.05, dist_meth="euclidean") {
-  if(nrow(centroids) != 1){
-    distance_matrix = dist(centroids, method = dist_meth, upper = TRUE)
-    v = ape::mst(distance_matrix)
-    rem = as.matrix(v)*as.matrix(distance_matrix) > 2*mean(as.matrix(v)*as.matrix(distance_matrix))
-    v = v*(1-rem)
-    connections = apply(v,1,sum)
-    outliers_clusters = which(connections <= 1)
-    distance = data.frame(fields::rdist(centroids, data))
-    
-    vec_na = which(apply(distance,2, function(x) NA %in% x))
-    min_distance = apply(t(distance), 1, which.min)
-    vec = c()
-    for(i in outliers_clusters){
-      index = sapply(which( rapply(list(min_distance), c) ==i), function(x){
-        ori_len = length(vec_na[which(vec_na<x)])
-        new_len = length(vec_na[which(vec_na<x+ ori_len)])
-        x = x+ori_len
-        while(ori_len != new_len){
-          x = x-ori_len+new_len
-          ori_len = length(vec_na[which(vec_na<x)])
-          new_len = length(vec_na[which(vec_na<x+ ori_len)])
-        }
-        x
-      })
-      if(length(index) < percent*length(data[,1])){
-        vec = c(vec, index)
-      }
-    }
-    as.vector(vec)
-  }
-  else {c()}
-}
-
-#' Minimum spanning tree
-#'
-#' @param data a data frame containing only numerical features 
-#' @param centroids a matrix containing centroids
-#' @param percent maximalsize of a group to consider all this points as outliers
-MST2 <- function(data, centroids, percent = 0.05, dist_meth="euclidean") {
-  if(nrow(centroids) != 1){
-    distance_matrix = dist(centroids, method = dist_meth, upper = TRUE)
-    v = ape::mst(distance_matrix)
-    len = length(v)
-    v = as.matrix(v)
-    distance_matrix = as.matrix(distance_matrix)
-    rem = matrix(rep(FALSE, len), nrow = sqrt(len), ncol = sqrt(len))
-    for(i in 1:nrow(v)){
-      val = v[i,]*distance_matrix[i,] > 2*mean(v[i,]*distance_matrix[i,])
-      rem[i,] = sapply(1:nrow(rem), function(x) rem[i,x] || val[x])
-      rem[,i] = sapply(1:nrow(rem), function(x) rem[x,i] || val[x])
-    }
-    v = v*(1-rem)
-    connections = apply(v,1,sum)
-    outliers_clusters = which(connections <= 1)
-    distance = data.frame(fields::rdist(centroids, data))
-    
-    vec_na = which(apply(distance,2, function(x) NA %in% x))
-    min_distance = apply(t(distance), 1, which.min)
-    vec = c()
-    for(i in outliers_clusters){
-      index = sapply(which( rapply(list(min_distance), c) ==i), function(x){
-        ori_len = length(vec_na[which(vec_na<x)])
-        new_len = length(vec_na[which(vec_na<x+ ori_len)])
-        x = x+ori_len
-        while(ori_len != new_len){
-          x = x-ori_len+new_len
-          ori_len = length(vec_na[which(vec_na<x)])
-          new_len = length(vec_na[which(vec_na<x+ ori_len)])
-        }
-        x
-      })
-      if(length(index) < percent*length(data[,1])){
-        vec = c(vec, index)
-      }
-    }
-    as.vector(vec)
-  }
-  else {c()}
-}
-
-
-
-#' Return an outlier score based on the two phases clustering algorithm
-#'
-#' @param data a data frame containing only numerical features 
-#' @param n number of repetion of the algorithm
-#' @param base_p_cluster initial number of clusters (proportion of data)
-#' @param max_p_cluster maximum number of clusters (proportion of data)
+#' @param pca_meth the pca method used
 #' @export
-two_phases_clustering <- function(data, n = 50, base_p_cluster = 0.1, max_p_clusters = 0.2){
-  out = rep(0,length(data[,1]))
-  for (i in 1:n) {
-    #centroids = kmeans(data,as.integer(length(data[,1])*base_p_cluster))$centers
-    centroids = MKP(data, base_p_cluster, max_p_clusters)
-    outliers = MST2(data, centroids)
-    if(length(outliers) != 0)
-      out[outliers] = out[outliers]+1
-  }
-  if(sum(out) == 0) out = rep(1,length(data[,1]))
-  vec = (out/n)
-  vec/sum(vec)
+pca_lof <- function(data, pca_meth=basic_pca){
+  pca = pca_meth(na.omit(data))
+  pca = scale(na.omit(data), pca$center, pca$scale)
+  nsub = nrow(pca)
+  if(nsub<=20) k = c(round(nsub-1),round((nsub-1)/2))
+  else k = c(10,20)
+  result = ldbod::ldbod(pca, k = k, nsub = nsub, method = c("lof"))
+  result = apply(result$lof,1,function(x) mean(x, na.rm = TRUE))
+  
+  result = result - min(result)
+  result[which(!is.finite(result))] = -1
+  result[which(result == -1)] = 3*max(result)
+  result/sum(result)
 }
 
-# LOCI
 
 
+## LOCI
 
 #' Return an outlier score based on the Local Correlation Integral
 #'
 #' @param data a data frame containing only numerical features 
+#' @param alpha vector of alpha (0<alpha<1)
 #' @param vector vector containing proportion of point in the neighboorhood of the point studied
+#' @param only_mean boolean TRUE implies that the mean is apply on the alpha, otherwise a matrix is return
 #' @export
 LOCI <- function(data, alpha = c(0.2, 0.5, 0.8), vector = seq(from = 0.2, to = 0.8, by = 0.3), only_mean = TRUE) {
   dist_mat = fields::rdist(data, data)

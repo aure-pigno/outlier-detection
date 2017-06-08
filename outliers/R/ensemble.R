@@ -1,8 +1,9 @@
 #' Compute the score of each points based on the score it made it every functions
 #'
 #' @param lor list of list of results named "probability_vector"
-#' @param v_char vector containing the name of the functions 
-#' @param draw boolean to print and draw
+#' @param fun intenal function (mean, meadian, max)
+#' @param nrot rotation for the fix point
+#' @param  dist_funct boolean to choose the distance function
 #' @export
 ensemble_function <- function(lor, fun = mean, nrot = 50, val, dist_funct = TRUE){
   v_char = names(lor)
@@ -31,6 +32,11 @@ ensemble_function <- function(lor, fun = mean, nrot = 50, val, dist_funct = TRUE
   score
 }
 
+#' Compute a weight based on the distance betwwen the vectors
+#'
+#' @param list1 score vector of the ensemble
+#' @param list2 score vector of the base detector
+#' @percent perecent proportion of sample taken into account
 order_difference <- function(list1, list2, percent = 0.4){
   sortedlist1 = sort(list1,decreasing = TRUE)
   sortedlist2 = sort(list2,decreasing = TRUE)
@@ -44,6 +50,11 @@ order_difference <- function(list1, list2, percent = 0.4){
 
 }
 
+#' Compute a weight based on the common elements betwwen the vectors
+#'
+#' @param list1 score vector of the ensemble
+#' @param list2 score vector of the base detector
+#' @percent perecent proportion of sample taken into account
 commun_point <- function(list1, list2, percent = 0.1){
   n = as.integer(length(list1)*percent)
   names(list1) = 1:length(list1)
@@ -105,6 +116,11 @@ greedy_model_selection <- function(lor, t = 0.1){
   E
 }
 
+
+#' Compute the estimation if E
+#'
+#' @param E list of detector score
+#' @param n number of points taken into account
 compute_p <- function(E,n){
   total_list = Reduce("+",E)/length(E)
   sorted = sort(total_list, decreasing = TRUE, index.return = TRUE)$ix
@@ -113,6 +129,12 @@ compute_p <- function(E,n){
   p
 }
 
+
+#' Compute the rank of the base detectors, in function of the correlation
+#'
+#' @param lor list of result
+#' @param v target vector
+#' @param decreasing Order of the sort
 correlation_sorted <- function(lor,v, decreasing = TRUE){
   namesl = names(lor)
   weighted_correlation_vector = rep(0,length(lor))

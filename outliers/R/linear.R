@@ -1,4 +1,6 @@
-# compute a basic pca 
+#' compute a basic pca 
+#' 
+#' @param x a dataframe containing only numerical features 
 basic_pca <- function(x){
   # Next we use the prcomp method to find PCAs
   pr <- prcomp(x, center = TRUE, scale. = TRUE)
@@ -7,7 +9,8 @@ basic_pca <- function(x){
 #' compute  an outlier score based on the distance from a pca 
 #' PCA from http://shahramabyari.com/2015/12/20/data-preparation-for-predictive-modeling-centering-scaling/
 #' 
-#' @param data a data frame containing only numerical features 
+#' @param x a data frame containing only numerical features 
+#' @param pca the pca method used
 #' @export
 pca_score <- function(x, pca=basic_pca){
 
@@ -38,7 +41,8 @@ pca_score <- function(x, pca=basic_pca){
 
 #' compute  an outlier score based on the distance from the support vector of a one-class SVM 
 #' 
-#' @param data a data frame containing only numerical features 
+#' @param x a data frame containing only numerical features 
+#' @param nu parameter needed for nu-classification
 #' @export
 one_class_svm <- function(x, svm.nu=.10){
   oneclass_svm <- e1071::svm(x=x, type="one-classification", nu=svm.nu)
